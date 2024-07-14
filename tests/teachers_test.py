@@ -99,3 +99,37 @@ def test_grade_assignment_draft_assignment(client, h_teacher_1):
     data = response.json
 
     assert data['error'] == 'FyleError'
+
+def test_grade_assignment_with_wrong_http_method(client, h_teacher_1):
+    """
+    failure case: only when grading an assignment with http method other than POST
+    """
+
+    response = client.get(
+        '/teacher/assignment/grade',
+        headers=h_teacher_1,
+        json={
+            "id": 1,
+            "grade": "A"
+        }
+    )
+    assert response.status_code == 404
+
+def test_grade_assignment_without_teacher(client, h_not_teacher):
+    """
+    failure case: only when grading an assignment without a teacher 
+    """
+
+    response = client.post(
+        '/teacher/assignments/grade',
+        headers=h_not_teacher
+        , json={
+            "id": 2,
+            "grade": "A"
+        }
+    )
+
+    assert response.status_code == 403
+    data = response.json
+
+    assert data['error'] == 'FyleError'

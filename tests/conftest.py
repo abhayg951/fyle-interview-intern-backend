@@ -66,3 +66,13 @@ def h_principal():
     }
 
     return headers
+
+@pytest.fixture
+def h_not_teacher():
+    headers = {
+        'X-Principal': json.dumps({
+            'user_id': 3
+        })
+    }
+
+    return headers

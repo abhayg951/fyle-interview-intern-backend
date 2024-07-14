@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, make_response
 from core import db
 from core.apis import decorators
 from core.apis.responses import APIResponse
@@ -12,7 +12,7 @@ teacher_assignments_resources = Blueprint('teacher_assignments_resources', __nam
 @decorators.authenticate_principal
 def list_assignments(p):
     """Returns list of assignments"""
-    teachers_assignments = Assignment.get_assignments_by_teacher()
+    teachers_assignments = Assignment.get_assignments_by_teacher(p.teacher_id)
     teachers_assignments_dump = AssignmentSchema().dump(teachers_assignments, many=True)
     return APIResponse.respond(data=teachers_assignments_dump)
 
@@ -22,8 +22,19 @@ def list_assignments(p):
 @decorators.authenticate_principal
 def grade_assignment(p, incoming_payload):
     """Grade an assignment"""
-    grade_assignment_payload = AssignmentGradeSchema().load(incoming_payload)
+    assignment_values = AssignmentSchema().dump(Assignment.query.filter(Assignment.id == incoming_payload['id']).all(), many=True)
 
+    if not assignment_values:
+        response = make_response({'error': 'FyleError'})
+        response.status_code = 404
+        return response
+    
+    if not assignment_values or assignment_values[0]["teacher_id"] != p.teacher_id:
+        response = make_response({'error': 'FyleError'})
+        response.status_code = 400
+        return response
+
+    grade_assignment_payload = AssignmentGradeSchema().load(incoming_payload)
     graded_assignment = Assignment.mark_grade(
         _id=grade_assignment_payload.id,
         grade=grade_assignment_payload.grade,

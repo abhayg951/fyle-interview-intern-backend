@@ -7,6 +7,10 @@ from core.models.students import Student
 from sqlalchemy.types import Enum as BaseEnum
 
 
+from sqlalchemy import select
+from core.models.principals import Principal
+from flask import make_response
+
 class GradeEnum(str, enum.Enum):
     A = 'A'
     B = 'B'
@@ -30,9 +34,6 @@ class Assignment(db.Model):
     state = db.Column(BaseEnum(AssignmentStateEnum), default=AssignmentStateEnum.DRAFT, nullable=False)
     created_at = db.Column(db.TIMESTAMP(timezone=True), default=helpers.get_utc_now, nullable=False)
     updated_at = db.Column(db.TIMESTAMP(timezone=True), default=helpers.get_utc_now, nullable=False, onupdate=helpers.get_utc_now)
-
-    def __repr__(self):
-        return '<Assignment %r>' % self.id
 
     @classmethod
     def filter(cls, *criterion):
@@ -66,6 +67,7 @@ class Assignment(db.Model):
         assertions.assert_valid(assignment.student_id == auth_principal.student_id, 'This assignment belongs to some other student')
         assertions.assert_valid(assignment.content is not None, 'assignment with empty content cannot be submitted')
 
+        assignment.state = AssignmentStateEnum.SUBMITTED
         assignment.teacher_id = teacher_id
         db.session.flush()
 
@@ -89,5 +91,10 @@ class Assignment(db.Model):
         return cls.filter(cls.student_id == student_id).all()
 
     @classmethod
-    def get_assignments_by_teacher(cls):
-        return cls.query.all()
+    def get_assignments_by_teacher(cls, teacher_id):
+        return cls.filter(cls.teacher_id == teacher_id).all()
+    
+    @classmethod
+    def get_assignments_by_principal(cls, principle_id):
+        x = Assignment.query.filter(Assignment.state == AssignmentStateEnum.GRADED and Assignment.state == AssignmentStateEnum.SUBMITTED).all()
+        return x
